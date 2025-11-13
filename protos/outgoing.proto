@@ -1,0 +1,10 @@
+syntax = "proto3";
+package outgoing;
+
+import "messages.proto"; 
+
+message ClientOutGoing {
+    oneof ClientOutGoing {
+        messages.TickUpdate tick = 1;
+    }
+}

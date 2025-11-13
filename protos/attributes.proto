@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package attributes;
+
+message Vec3 {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+}
+
+message Vec4 {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+    double w = 4;
+}
+
+
+message Attribute {
+    uint32 id = 1;
+    oneof value {
+        bool bool = 2;
+        string String = 3;
+        Vec3 vec3 = 4;
+        Vec4 vec4 = 5;
+    }
+    uint64 timestamp = 6;
+}

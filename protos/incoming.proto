@@ -1,0 +1,10 @@
+syntax = "proto3";
+package incoming;
+
+import "messages.proto"; 
+
+message ServerIncoming {
+    oneof Update {
+        messages.TickUpdate tick = 1;
+    }
+}

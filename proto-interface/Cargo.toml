@@ -1,0 +1,17 @@
+[package]
+name = "proto-interface"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+prost = "0.12"
+tokio-util = { version = "0.7", features = ["codec"] }
+futures-util = { version = "0.3", features = ["sink"] }
+getset = "0.1" 
+thiserror = "2.0.17"
+arrayvec = { workspace = true}
+
+[build-dependencies]
+prost-build = "0.12"

@@ -1,0 +1,12 @@
+syntax = "proto3";
+package handshake;
+
+
+message HandshakeRequest {
+  bytes auth = 1;
+}
+
+message HandshakeResponse {
+  uint64 assigned_id = 1;
+  optional string wallet_key = 2;
+}

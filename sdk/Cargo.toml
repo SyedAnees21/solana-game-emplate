@@ -1,0 +1,16 @@
+[package]
+name = "sdk"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+proto-interface = { path = "../proto-interface" }
+tokio = { workspace = true }
+prost = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
+thiserror = { workspace = true }
+arrayvec = { workspace = true }
+dashmap = { workspace = true }
+

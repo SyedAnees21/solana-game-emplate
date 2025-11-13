@@ -1,0 +1,20 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sdk = { path = "../sdk" }
+proto-interface = { path = "../proto-interface" }
+prost = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+futures-util = { workspace = true }
+anchor-client = { workspace = true }
+anchor-lang = { workspace = true }
+dashmap ={ workspace = true}
+arrayvec = { workspace = true}
+arc-swap ={ workspace = true}
+
+[build-dependencies]
+prost-build = "0.12"

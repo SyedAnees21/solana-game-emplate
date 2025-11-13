@@ -1,0 +1,34 @@
+[workspace]
+members = [
+    "programs/*",
+    "server",
+    "sdk",
+    "examples",
+    "proto-interface",
+]
+
+resolver = "2"
+
+[workspace.dependencies]
+dashmap = "6.1.0"
+prost = "0.12"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+futures-util = { version = "0.3", features = ["sink"] }
+anchor-client = "0.32.1"
+anchor-lang = "0.32.1"
+arrayvec = "0.7.6"
+arc-swap = "1.7.1"
+anyhow = "1.0.100"
+thiserror = "2.0.17"
+
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1

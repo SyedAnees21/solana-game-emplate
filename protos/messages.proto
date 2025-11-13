@@ -1,0 +1,26 @@
+syntax = "proto3";
+package messages;
+
+import "attributes.proto";
+
+message Entity {
+    uint32 id = 1;
+    repeated attributes.Attribute attrs =2;
+}
+
+message TickUpdate {
+    repeated Entity entities = 1;
+}
+
+message ToServer {
+  oneof msg {
+    TickUpdate tick = 1;
+  }
+}
+
+message ToClient {
+  oneof msg {
+    TickUpdate tick = 1;
+  }
+}
+
