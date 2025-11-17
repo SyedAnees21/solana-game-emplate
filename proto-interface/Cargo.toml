@@ -3,11 +3,15 @@ name = "proto-interface"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+idl-build = []
 
 [dependencies]
 prost = { workspace = true }
 thiserror = { workspace = true }
-arrayvec = { workspace = true}
+arrayvec = { workspace = true }
+bytemuck = { workspace = true }
+anchor-lang ={ workspace = true }
 
 [build-dependencies]
 prost-build = "0.12"
