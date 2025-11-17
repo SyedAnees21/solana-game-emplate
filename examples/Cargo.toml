@@ -6,7 +6,7 @@ edition = "2021"
 
 [dependencies]
 sdk = { path = "../sdk" }
-proto-interface ={ path = "../proto-interface"}
+proto-interface = { path = "../proto-interface" }
 tokio = { version = "1", features = ["full"] }
 prost = "0.12"
 tokio-util = { version = "0.7", features = ["codec"] }
@@ -14,3 +14,6 @@ futures-util = { version = "0.3", features = ["sink"] }
 arrayvec = { workspace = true }
 dashmap = { workspace = true }
 anyhow = { workspace = true }
+anchor-client = { workspace = true }
+anchor-lang = { workspace = true }
+rand = { workspace = true }

@@ -1147,12 +1147,15 @@ dependencies = [
 name = "examples"
 version = "0.1.0"
 dependencies = [
+ "anchor-client",
+ "anchor-lang",
  "anyhow",
  "arrayvec",
  "dashmap",
  "futures-util",
  "prost",
  "proto-interface",
+ "rand 0.8.5",
  "sdk",
  "tokio",
  "tokio-util",
@@ -2294,7 +2297,9 @@ dependencies = [
 name = "proto-interface"
 version = "0.1.0"
 dependencies = [
+ "anchor-lang",
  "arrayvec",
+ "bytemuck",
  "prost",
  "prost-build",
  "thiserror 2.0.17",
@@ -3411,9 +3416,10 @@ dependencies = [
  "anchor-client",
  "anchor-lang",
  "bs58 0.4.0",
+ "bytemuck",
  "getrandom 0.2.16",
+ "proto-interface",
  "rand 0.8.5",
- "sdk",
  "tokio",
 ]
 

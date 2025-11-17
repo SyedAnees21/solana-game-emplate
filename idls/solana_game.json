@@ -1,5 +1,5 @@
 {
-  "address": "3UYVFTzKfxT842KUoWrqLsZf1PJ1anCVU1rCvZcFwMSx",
+  "address": "ABXBgpeKKeRu9eKLtCVF7MKnc6E4ABkx8nJdLSsFdK2M",
   "metadata": {
     "name": "solana_game",
     "version": "0.1.0",
@@ -267,6 +267,67 @@
       ]
     },
     {
+      "name": "initialize_entity",
+      "discriminator": [
+        155,
+        99,
+        169,
+        121,
+        248,
+        156,
+        61,
+        132
+      ],
+      "accounts": [
+        {
+          "name": "entity",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  110,
+                  116,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "player_id"
+              },
+              {
+                "kind": "arg",
+                "path": "entity_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "player",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "_player_id",
+          "type": "u64"
+        },
+        {
+          "name": "entity_id",
+          "type": "u32"
+        }
+      ]
+    },
+    {
       "name": "initialize_game",
       "docs": [
         "Initializes a new game state and a treasury PDA to hold rewards."
@@ -438,6 +499,19 @@
   ],
   "accounts": [
     {
+      "name": "EntityState",
+      "discriminator": [
+        92,
+        218,
+        188,
+        5,
+        237,
+        215,
+        13,
+        253
+      ]
+    },
+    {
       "name": "GameState",
       "discriminator": [
         144,
@@ -477,6 +551,122 @@
     }
   ],
   "types": [
+    {
+      "name": "AttributeSlot",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "u32"
+          },
+          {
+            "name": "tag",
+            "type": "u8"
+          },
+          {
+            "name": "used",
+            "type": "u8"
+          },
+          {
+            "name": "_pad",
+            "type": {
+              "array": [
+                "u8",
+                2
+              ]
+            }
+          },
+          {
+            "name": "payload",
+            "type": {
+              "array": [
+                "u8",
+                64
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntityHeader",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "entity_id",
+            "type": "u32"
+          },
+          {
+            "name": "owner",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "len",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "_pad",
+            "type": {
+              "array": [
+                "u8",
+                3
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "EntityState",
+      "serialization": "bytemuckunsafe",
+      "repr": {
+        "kind": "rust",
+        "packed": true
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "header",
+            "type": {
+              "defined": {
+                "name": "EntityHeader"
+              }
+            }
+          },
+          {
+            "name": "attributes",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "AttributeSlot"
+                  }
+                },
+                128
+              ]
+            }
+          }
+        ]
+      }
+    },
     {
       "name": "GameState",
       "type": {

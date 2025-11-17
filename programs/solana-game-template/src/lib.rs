@@ -1,280 +1,140 @@
 use anchor_lang::prelude::*;
-use anchor_lang::system_program;
-use anchor_lang::solana_program;
-// Replace this with your own program ID after running `anchor build`
-declare_id!("3UYVFTzKfxT842KUoWrqLsZf1PJ1anCVU1rCvZcFwMSx");
+use proto_interface::web3::*;
 
-// 1 SOL in lamports
-const ONE_SOL: u64 = 1_000_000_000;
-const COIN_REQUIREMENT: u64 = 10;
+use crate::instructions::*;
+
+pub mod instructions;
+pub mod state;
+
+declare_id!("ABXBgpeKKeRu9eKLtCVF7MKnc6E4ABkx8nJdLSsFdK2M");
 
 #[program]
 pub mod solana_game {
     use super::*;
 
-    /// Initializes a new game state and a treasury PDA to hold rewards.
     pub fn initialize_game(
         ctx: Context<InitializeGame>,
         game_id: u64,
-        player_amount: u64,
+        game_name: InlineString,
     ) -> Result<()> {
+        let mut game_state = ctx.accounts.game_state.load_init()?;
+
+        game_state.id = game_id;
+        game_state.game_name = game_name;
+
         msg!("Initializing game with ID: {}", game_id);
-        ctx.accounts.game_state.game_id = game_id;
-        ctx.accounts.game_state.player_amount = player_amount;
-        ctx.accounts.game_state.authority = ctx.accounts.authority.key();
-        ctx.accounts.game_state.bump = ctx.bumps.game_state;
         Ok(())
     }
 
-    /// Funds the game's treasury PDA with SOL.
-    pub fn fund_treasury(ctx: Context<FundTreasury>, amount: u64) -> Result<()> {
-        msg!("Funding treasury with {} lamports", amount);
-        let cpi_context = CpiContext::new(
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.authority.to_account_info(),
-                to: ctx.accounts.treasury.to_account_info(),
-            },
-        );
-        system_program::transfer(cpi_context, amount)?;
+    pub fn initialize_player(
+        ctx: Context<InitializePlayer>,
+        _game_id: u64,
+        player_id: u64,
+        player_name: InlineString,
+    ) -> Result<()> {
+        let mut player_state = ctx.accounts.player_state.load_init()?;
+        let mut game_state = ctx.accounts.game_state.load_mut()?;
+
+        player_state.player_id = player_id;
+        player_state.player_name = player_name;
+
+        game_state.total_players += 1;
+
         msg!(
-            "Treasury funded. New balance: {}",
-            ctx.accounts.treasury.to_account_info().lamports()
+            "Game authority initializing player account for: {:?}",
+            player_state
         );
         Ok(())
     }
 
-    /// Initializes a player's state PDA. Can only be called by the game authority.
-    /// Seeds: ["player", game_state_key, player_key]
-    pub fn initialize_player(ctx: Context<InitializePlayer>, player: Pubkey) -> Result<()> {
-        msg!("Game authority initializing player account for: {}", player);
-        let player_state = &mut ctx.accounts.player_state;
-        player_state.player = player;
-        player_state.game_state = ctx.accounts.game_state.key();
-        player_state.coin_count = 0;
-        player_state.termination_count = 0;
-        player_state.bump = ctx.bumps.player_state;
+    pub fn initialize_entity(
+        ctx: Context<InitializeEntity>,
+        _player_id: u64,
+        entity_id: u32,
+    ) -> Result<()> {
+        msg!("Initializing entity with ID: {}", entity_id);
+        let mut entity = ctx.accounts.entity.load_init()?;
+        let mut player_state = ctx.accounts.player_state.load_mut()?;
+
+        entity.header.entity_id = entity_id;
+        entity.header.owner = ctx.accounts.player.key().to_bytes();
+
+        player_state.total_entities += 1;
+
         Ok(())
     }
 
-    /// (Helper instruction for testing) Adds coins to a player's state.
-    /// In a real game, this logic would be more complex (e.g., only callable by the game authority).
-    pub fn add_coins(ctx: Context<AddCoins>, amount: u64) -> Result<()> {
-        // Basic check: Only the player can add coins to their own account.
-        // In a real app, you'd want a more secure check (e.g., only game admin)
+    pub fn update_entity(
+        ctx: Context<UpdateEntity>,
+        _player_id: u64,
+        _entity_id: u32,
+        id: u32,
+        tag: ValueTag,
+        payload: ValuePayload,
+    ) -> Result<()> {
+        let mut entity = ctx.accounts.entity.load_mut()?;
+
         require_keys_eq!(
-            ctx.accounts.authority.key(),
-            ctx.accounts.game_state.authority.key(),
-            GameError::NotPlayerAuthority
-        );
-        
-        ctx.accounts.player_state.coin_count += amount;
-        msg!(
-            "Added {} coins. New total: {}",
-            amount,
-            ctx.accounts.player_state.coin_count
-        );
-        Ok(())
-    }
-
-    /// Allows a player to claim 1 SOL if they have >= 10 coins.
-    pub fn claim_reward(ctx: Context<ClaimReward>) -> Result<()> {
-        msg!("Player {} attempting to claim reward...", ctx.accounts.player.key());
-        let player_state = &mut ctx.accounts.player_state;
-
-        // 1. Check if player has enough coins
-        require!(
-            player_state.coin_count >= COIN_REQUIREMENT,
-            GameError::NotEnoughCoins
+            Pubkey::from(entity.header.owner),
+            ctx.accounts.player.key(),
+            GameError::EntityOwnerMismatch
         );
 
-        // 2. Subtract coins
-        player_state.coin_count -= COIN_REQUIREMENT;
-        msg!(
-            "Subtracted {} coins. Remaining coins: {}",
-            COIN_REQUIREMENT,
-            player_state.coin_count
-        );
+        let mut free_slot = None;
 
-        // 3. Transfer SOL from treasury to player
-        // Build seed slices that live long enough for invoke_signed
-        let game_id = ctx.accounts.game_state.game_id.to_le_bytes();
-        let bump = ctx.bumps.treasury;
-        let seed0: &[u8] = b"treasury";
-        let seed1: &[u8] = game_id.as_ref();
-        let seed2: &[u8] = &[bump];
-        let signer_seeds: &[&[u8]] = &[seed0, seed1, seed2];
-        let signer = &[signer_seeds];
+        for slot_index in 0..MAX_ATTR_PER_ENTITY {
+            let slot = entity.attributes[slot_index];
+            if slot.in_use() {
+                if slot.tag() == tag && slot.id() == id {
+                    entity.attributes[slot_index]
+                        .payload
+                        .as_mut()
+                        .copy_from_slice(payload.as_ref());
+                    return Ok(());
+                }
+            }
 
-        solana_program::program::invoke_signed(
-            &solana_program::system_instruction::transfer(
-                &ctx.accounts.treasury.key(),
-                &ctx.accounts.player.key(),
-                ONE_SOL,
-            ),
-            &[
-                ctx.accounts.treasury.to_account_info(),
-                ctx.accounts.player.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-            ],
-            signer,
-        )?;
+            if free_slot.is_none() {
+                free_slot = Some(slot_index);
+            }
+        }
 
-        msg!(
-            "Successfully transferred 1 SOL to player {}",
-            ctx.accounts.player.key()
-        );
+        let Some(free_slot) = free_slot else {
+            return Err(error!(GameError::EntityStorageFull));
+        };
+
+        entity.attributes[free_slot].id = id;
+        entity.attributes[free_slot].used = 1;
+        entity.attributes[free_slot].tag = tag;
+        entity.attributes[free_slot]
+            .payload
+            .as_mut()
+            .copy_from_slice(payload.as_ref());
+
+        entity.header.len = entity.header.len.saturating_add(1);
+
         Ok(())
     }
 }
 
-// --- Account Structures ---
+// #[account]
+// #[derive(InitSpace)]
+// pub struct GameState {
+//     pub game_id: u64,
+//     pub player_amount: u64,
+//     pub authority: Pubkey,
+//     pub bump: u8,
+// }
 
-#[derive(Accounts)]
-#[instruction(game_id: u64)]
-pub struct InitializeGame<'info> {
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + GameState::INIT_SPACE,
-        seeds = [b"game", game_id.to_le_bytes().as_ref()],
-        bump
-    )]
-    pub game_state: Account<'info, GameState>,
-
-    /// CHECK: This PDA is created as a zero-data, system-owned account used only to hold lamports.
-    ///         We don't deserialize any data from it.
-    #[account(
-        init,
-        payer = authority,
-        space = 0, // zero-data system-owned account to hold lamports only
-        owner = system_program.key(),
-        seeds = [b"treasury", game_id.to_le_bytes().as_ref()],
-        bump
-    )]
-    pub treasury: UncheckedAccount<'info>,
-
-    #[account(mut)]
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct FundTreasury<'info> {
-    /// CHECK: This PDA is a zero-data, system-owned account used only to hold lamports.
-    ///         No deserialization is required and it's safe to treat as UncheckedAccount.
-    #[account(
-        mut,
-        seeds = [b"treasury", game_state.game_id.to_le_bytes().as_ref()],
-        bump,
-    )]
-    pub treasury: UncheckedAccount<'info>,
-
-    #[account(
-        seeds = [b"game", game_state.game_id.to_le_bytes().as_ref()],
-        bump,
-    )]
-    pub game_state: Account<'info, GameState>,
-
-    #[account(mut, address = game_state.authority)]
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-#[instruction(player: Pubkey)]
-pub struct InitializePlayer<'info> {
-    #[account(
-        init,
-        payer = authority,
-        space = 8 + PlayerState::INIT_SPACE,
-        seeds = [b"player", game_state.game_id.to_le_bytes().as_ref(), player.key().as_ref()],
-        bump
-    )]
-    pub player_state: Account<'info, PlayerState>,
-
-    #[account(
-        seeds = [b"game", game_state.game_id.to_le_bytes().as_ref()],
-        bump,
-    )]
-    pub game_state: Account<'info, GameState>,
-
-    #[account(mut, address = game_state.authority)]
-    pub authority: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct AddCoins<'info> {
-    #[account(
-        mut,
-        seeds = [b"player", game_state.game_id.to_le_bytes().as_ref(), player_state.player.key().as_ref()],
-        bump,
-        has_one = game_state,
-    )]
-    pub player_state: Account<'info, PlayerState>,
-    
-    pub game_state: Account<'info, GameState>, // Used for seed validation
-    
-    #[account(mut, address = game_state.authority)]
-    pub authority: Signer<'info>, // The player whose state is being modified
-}
-
-
-#[derive(Accounts)]
-pub struct ClaimReward<'info> {
-    #[account(
-        mut,
-        seeds = [b"player", game_state.key().as_ref(), player.key().as_ref()],
-        bump = player_state.bump,
-        has_one = game_state,
-        has_one = player,
-    )]
-    pub player_state: Account<'info, PlayerState>,
-
-    #[account(
-        seeds = [b"game", game_state.game_id.to_le_bytes().as_ref()],
-        bump = game_state.bump,
-    )]
-    pub game_state: Account<'info, GameState>,
-
-    /// CHECK: This PDA is a zero-data, system-owned account used only to hold lamports.
-    ///         No deserialization is required and it's safe to treat as UncheckedAccount.
-    #[account(
-        mut,
-        seeds = [b"treasury", game_state.game_id.to_le_bytes().as_ref()],
-        bump,
-    )]
-    pub treasury: UncheckedAccount<'info>,
-
-    #[account(mut)]
-    pub player: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-// --- Account Data ---
-
-#[account]
-#[derive(InitSpace)]
-pub struct GameState {
-    pub game_id: u64,
-    pub player_amount: u64,
-    pub authority: Pubkey,
-    pub bump: u8,
-}
-
-#[account]
-#[derive(InitSpace, Debug)]
-pub struct PlayerState {
-    pub player: Pubkey,
-    pub game_state: Pubkey,
-    pub coin_count: u64,
-    pub termination_count: u64,
-    pub bump: u8,
-}
-
-
-
+// #[account]
+// #[derive(InitSpace, Debug)]
+// pub struct PlayerState {
+//     pub player: Pubkey,
+//     pub game_state: Pubkey,
+//     pub coin_count: u64,
+//     pub termination_count: u64,
+//     pub bump: u8,
+// }
 
 // --- Errors ---
 
@@ -284,4 +144,8 @@ pub enum GameError {
     NotEnoughCoins,
     #[msg("Signer is not the player associated with this state.")]
     NotPlayerAuthority,
+    #[msg("Signer is not the player (owner) associated with this entity.")]
+    EntityOwnerMismatch,
+    #[msg("Unable to upsert the new attribute due to entity out-of-slots.")]
+    EntityStorageFull,
 }

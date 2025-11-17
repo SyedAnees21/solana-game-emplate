@@ -14,7 +14,7 @@ cpi = ["no-entrypoint"]
 no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
-idl-build = ["anchor-lang/idl-build"]
+idl-build = ["anchor-lang/idl-build", "proto-interface/idl-build"]
 anchor-debug = []
 custom-heap = []
 custom-panic = []
@@ -24,7 +24,8 @@ custom-panic = []
 anchor-lang = "0.32.1"
 rand = { version = "0.8", features = ["std"] }
 getrandom = { version = "0.2.10", features = ["custom"] }
-sdk = { path = "../../sdk" }
+proto-interface = { path = "../../proto-interface" }
+bytemuck = { workspace = true }
 
 [dev-dependencies]
 anchor-client = "0.32.1"
@@ -32,4 +33,6 @@ tokio = { version = "1", features = ["full"] }
 bs58 = "0.4.0"
 
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(target_os, values("solana"))',
+] }
