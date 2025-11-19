@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
-use proto_interface::web3::*;
+use proto_interface::web3::{
+    InlineString, MAX_ATTR_PER_ENTITY, WEB3_VALUE_PAYLOAD_BYTES,
+};
 
 use crate::instructions::*;
 
@@ -12,9 +14,17 @@ declare_id!("ABXBgpeKKeRu9eKLtCVF7MKnc6E4ABkx8nJdLSsFdK2M");
 pub mod solana_game {
     use super::*;
 
+    pub type GameId = u64;
+    pub type PlayerId = u64;
+    pub type EntityId = u32;
+    pub type AttributeId = u32;
+
+    pub type ValueTag = u8;
+    pub type ValuePayload = [u8; WEB3_VALUE_PAYLOAD_BYTES];
+
     pub fn initialize_game(
         ctx: Context<InitializeGame>,
-        game_id: u64,
+        game_id: GameId,
         game_name: InlineString,
     ) -> Result<()> {
         let mut game_state = ctx.accounts.game_state.load_init()?;
@@ -28,8 +38,8 @@ pub mod solana_game {
 
     pub fn initialize_player(
         ctx: Context<InitializePlayer>,
-        _game_id: u64,
-        player_id: u64,
+        _game_id: GameId,
+        player_id: PlayerId,
         player_name: InlineString,
     ) -> Result<()> {
         let mut player_state = ctx.accounts.player_state.load_init()?;
@@ -49,8 +59,8 @@ pub mod solana_game {
 
     pub fn initialize_entity(
         ctx: Context<InitializeEntity>,
-        _player_id: u64,
-        entity_id: u32,
+        _player_id: PlayerId,
+        entity_id: EntityId,
     ) -> Result<()> {
         msg!("Initializing entity with ID: {}", entity_id);
         let mut entity = ctx.accounts.entity.load_init()?;
@@ -66,9 +76,9 @@ pub mod solana_game {
 
     pub fn update_entity(
         ctx: Context<UpdateEntity>,
-        _player_id: u64,
-        _entity_id: u32,
-        id: u32,
+        _player_id: PlayerId,
+        _entity_id: EntityId,
+        id: AttributeId,
         tag: ValueTag,
         payload: ValuePayload,
     ) -> Result<()> {
@@ -116,27 +126,6 @@ pub mod solana_game {
         Ok(())
     }
 }
-
-// #[account]
-// #[derive(InitSpace)]
-// pub struct GameState {
-//     pub game_id: u64,
-//     pub player_amount: u64,
-//     pub authority: Pubkey,
-//     pub bump: u8,
-// }
-
-// #[account]
-// #[derive(InitSpace, Debug)]
-// pub struct PlayerState {
-//     pub player: Pubkey,
-//     pub game_state: Pubkey,
-//     pub coin_count: u64,
-//     pub termination_count: u64,
-//     pub bump: u8,
-// }
-
-// --- Errors ---
 
 #[error_code]
 pub enum GameError {

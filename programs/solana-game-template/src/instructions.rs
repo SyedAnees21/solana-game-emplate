@@ -1,5 +1,5 @@
-use anchor_lang::prelude::*;
 use crate::state::{EntityState, GameState, PlayerState};
+use anchor_lang::prelude::*;
 
 const ANCHOR_DISCRIMINATOR: usize = 8;
 
@@ -34,6 +34,7 @@ pub struct InitializePlayer<'info> {
     pub player_state: AccountLoader<'info, PlayerState>,
 
     #[account(
+        mut,
         seeds = [b"game", game_id.to_le_bytes().as_ref()],
         bump,
     )]
@@ -41,7 +42,7 @@ pub struct InitializePlayer<'info> {
 
     #[account(mut)]
     pub game_owner: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
@@ -64,10 +65,9 @@ pub struct InitializeEntity<'info> {
     )]
     pub player_state: AccountLoader<'info, PlayerState>,
 
-
     #[account(mut)]
     pub player: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
 
@@ -83,6 +83,6 @@ pub struct UpdateEntity<'info> {
 
     #[account(mut)]
     pub player: Signer<'info>,
-    
+
     pub system_program: Program<'info, System>,
 }
