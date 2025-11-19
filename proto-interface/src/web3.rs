@@ -7,8 +7,8 @@ pub const ANCHOR_DISCRIMINATOR: usize = 8;
 pub const WEB3_VALUE_PAYLOAD_BYTES: usize = 64;
 pub const MAX_ATTR_PER_ENTITY: usize = MAX_ATTRIBUTES_PER_COMPONENT;
 
-// pub type ValueTag = u8;
-// pub type ValuePayload = [u8; WEB3_VALUE_PAYLOAD_BYTES];
+pub type ValueTag = u8;
+pub type ValuePayload = [u8; WEB3_VALUE_PAYLOAD_BYTES];
 
 pub mod tags {
     type ValueTag = u8;
@@ -20,47 +20,46 @@ pub mod tags {
     pub const STRING: ValueTag = 4;
 }
 
+// #[repr(C)]
+// #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable, AnchorSerialize, AnchorDeserialize)]
+// pub struct ValueTag(u8);
+
+// impl From<u8> for ValueTag {
+//     fn from(value: u8) -> Self {
+//         Self(value)
+//     }
+// }
+
+// impl AsRef<u8> for ValueTag {
+//     fn as_ref(&self) -> &u8 {
+//         &self.0
+//     }
+// }
+
+// #[repr(C)]
+// #[derive(Clone, Copy, Pod, Zeroable, AnchorSerialize, AnchorDeserialize, Debug)]
+// pub struct ValuePayload([u8; WEB3_VALUE_PAYLOAD_BYTES]);
+
+// impl Default for ValuePayload {
+//     fn default() -> Self {
+//         Self([0; WEB3_VALUE_PAYLOAD_BYTES])
+//     }
+// }
+
+// impl AsRef<[u8; WEB3_VALUE_PAYLOAD_BYTES]> for ValuePayload {
+//     fn as_ref(&self) -> &[u8; WEB3_VALUE_PAYLOAD_BYTES] {
+//         &self.0
+//     }
+// }
+
+// impl AsMut<[u8; WEB3_VALUE_PAYLOAD_BYTES]> for ValuePayload {
+//     fn as_mut(&mut self) -> &mut [u8; WEB3_VALUE_PAYLOAD_BYTES] {
+//         &mut self.0
+//     }
+// }
+
 #[repr(C)]
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[derive(Pod, Zeroable, AnchorSerialize, AnchorDeserialize)]
-pub struct ValueTag(u8);
-
-impl From<u8> for ValueTag {
-    fn from(value: u8) -> Self {
-        Self(value)
-    }
-}
-
-impl AsRef<u8> for ValueTag {
-    fn as_ref(&self) -> &u8 {
-        &self.0
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Pod, Zeroable, AnchorSerialize, AnchorDeserialize, Debug)]
-pub struct ValuePayload([u8; WEB3_VALUE_PAYLOAD_BYTES]);
-
-impl Default for ValuePayload {
-    fn default() -> Self {
-        Self([0; WEB3_VALUE_PAYLOAD_BYTES])
-    }
-}
-
-impl AsRef<[u8; WEB3_VALUE_PAYLOAD_BYTES]> for ValuePayload {
-    fn as_ref(&self) -> &[u8; WEB3_VALUE_PAYLOAD_BYTES] {
-        &self.0
-    }
-}
-
-impl AsMut<[u8; WEB3_VALUE_PAYLOAD_BYTES]> for ValuePayload {
-    fn as_mut(&mut self) -> &mut [u8; WEB3_VALUE_PAYLOAD_BYTES] {
-        &mut self.0
-    }
-}
-
-#[derive(Clone, Copy, Pod, Zeroable, AnchorSerialize, AnchorDeserialize, Debug, Default)]
-#[repr(C)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Pod, Zeroable, Debug, Default)]
 pub struct InlineString {
     pub len: u8,
     pub buffer: [u8; MAX_STRING_LENGTH],
@@ -82,18 +81,23 @@ impl AsRef<[u8; MAX_STRING_LENGTH]> for InlineString {
     }
 }
 
-impl From<Value> for InlineString {
-    fn from(value: Value) -> Self {
+impl<T: AsRef<[u8]>> From<T> for InlineString {
+    fn from(value: T) -> Self {
         let mut iniline_string = InlineString::default();
-
-        let Value::String(s) = value else {
-            return iniline_string;
-        };
-
-        iniline_string.set_len(s.len());
-        iniline_string.as_mut()[..s.len()].copy_from_slice(s.as_bytes());
+        let bytes = value.as_ref();
+        iniline_string.set_len(bytes.len());
+        iniline_string.as_mut()[..bytes.len()].copy_from_slice(bytes);
 
         iniline_string
+    }
+}
+
+impl From<Value> for InlineString {
+    fn from(value: Value) -> Self {
+        let Value::String(s) = value else {
+            return Default::default();
+        };
+        InlineString::from(s.as_bytes())
     }
 }
 
@@ -127,8 +131,8 @@ impl InlineString {
     }
 }
 
-#[derive(Clone, Copy, Pod, Zeroable, AnchorSerialize, AnchorDeserialize, Debug)]
 #[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable, Debug, AnchorSerialize, AnchorDeserialize)]
 pub struct EntityHeader {
     pub entity_id: EntityId,
     pub owner: [u8; 32],
@@ -141,8 +145,8 @@ impl anchor_lang::Space for EntityHeader {
     const INIT_SPACE: usize = size_of::<Self>();
 }
 
-#[derive(Clone, Copy, Pod, Zeroable, AnchorSerialize, AnchorDeserialize, Debug)]
 #[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable, Debug, AnchorSerialize, AnchorDeserialize)]
 pub struct AttributeSlot {
     pub id: AttributeId,
     pub tag: ValueTag,

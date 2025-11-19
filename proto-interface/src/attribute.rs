@@ -6,7 +6,9 @@ use crate::{
         attributes::{attribute::Value as ExtValue, Attribute as ExtAttribute, Vec3, Vec4},
         messages::Entity,
     },
-    from_bytes, web3, AttributeId, EntityId, Timestamp, ValuePayload, ValueTag, MAX_STRING_LENGTH,
+    from_bytes,
+    web3::{self, WEB3_VALUE_PAYLOAD_BYTES},
+    AttributeId, EntityId, Timestamp, ValuePayload, ValueTag, MAX_STRING_LENGTH,
 };
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -25,7 +27,7 @@ impl Value {
     }
 
     pub fn to_payload(&self) -> (ValueTag, ValuePayload) {
-        let mut payload = ValuePayload::default();
+        let mut payload = [0; WEB3_VALUE_PAYLOAD_BYTES];
 
         fn fill_payload(payload: &mut ValuePayload, bytes: impl AsRef<[u8]>, delimited: bool) {
             let bytes = bytes.as_ref();
@@ -37,50 +39,49 @@ impl Value {
                 til += 1;
                 payload.as_mut()[0] = til as u8;
             }
-            payload.as_mut()[from..til].copy_from_slice(&bytes[..]);
+            payload[from..til].copy_from_slice(&bytes[..]);
         }
 
         match self {
             Value::None => (web3::tags::NONE.into(), payload),
             Value::Bool(b) => {
                 if *b {
-                    payload.as_mut()[0] = 1
+                    payload[0] = 1
                 };
 
-                (web3::tags::BOOL.into(), payload)
+                (web3::tags::BOOL, payload)
             }
             Value::Vec3(x, y, z) => {
                 let bytes = bytes!(x, y, z);
                 fill_payload(&mut payload, bytes, false);
 
-                (web3::tags::VEC3.into(), payload)
+                (web3::tags::VEC3, payload)
             }
             Value::Vec4(x, y, z, w) => {
                 let bytes = bytes!(x, y, z, w);
                 fill_payload(&mut payload, bytes, false);
 
-                (web3::tags::VEC4.into(), payload)
+                (web3::tags::VEC4, payload)
             }
             Value::String(s) => {
                 let bytes = bytes!(s, String);
                 fill_payload(&mut payload, bytes, true);
 
-                (web3::tags::STRING.into(), payload)
+                (web3::tags::STRING, payload)
             }
         }
     }
 
     pub fn from_payload(payload: ValuePayload, tag: ValueTag) -> Self {
-        let tag = *tag.as_ref();
         match tag {
             t if t == web3::tags::NONE => Value::None,
-            t if t == web3::tags::BOOL => Value::Bool(payload.as_ref()[0] == 1),
+            t if t == web3::tags::BOOL => Value::Bool(payload[0] == 1),
             t if t == web3::tags::VEC3 => {
-                let v = from_bytes!(payload.as_ref(), 24, f64);
+                let v = from_bytes!(payload, 24, f64);
                 Value::Vec3(v[0], v[1], v[2])
             }
             t if t == web3::tags::VEC4 => {
-                let v = from_bytes!(payload.as_ref(), 32, f64);
+                let v = from_bytes!(payload, 32, f64);
                 Value::Vec4(v[0], v[1], v[2], v[3])
             }
             t if t == web3::tags::STRING => {
@@ -157,27 +158,23 @@ mod tests {
         let len = "ABCDefgh".as_bytes().len() + 1;
 
         let (tag, payload) = b.to_payload();
-        assert_eq!((*tag.as_ref(), payload.as_ref()[0]), (web3::tags::BOOL, 1));
+        assert_eq!((tag, payload[0]), (web3::tags::BOOL, 1));
 
         let (tag, payload) = v3.to_payload();
         assert_eq!(
-            (*tag.as_ref(), payload.as_ref()[..24].into()),
+            (tag, payload[..24].into()),
             (web3::tags::VEC3, bytes!(1_f64, 2_f64, 3_f64))
         );
 
         let (tag, payload) = v4.to_payload();
         assert_eq!(
-            (*tag.as_ref(), payload.as_ref()[..32].into()),
+            (tag, payload[..32].into()),
             (web3::tags::VEC4, bytes!(1_f64, 2_f64, 3_f64, 4_f64))
         );
 
         let (tag, payload) = s.to_payload();
         assert_eq!(
-            (
-                *tag.as_ref(),
-                payload.as_ref()[1..len].into(),
-                payload.as_ref()[0]
-            ),
+            (tag, payload[1..len].into(), payload[0]),
             (web3::tags::STRING, bytes!("ABCDefgh", String), len as u8)
         );
     }

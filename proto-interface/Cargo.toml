@@ -12,6 +12,7 @@ thiserror = { workspace = true }
 arrayvec = { workspace = true }
 bytemuck = { workspace = true }
 anchor-lang ={ workspace = true }
+anchor-client ={ workspace = true }
 
 [build-dependencies]
 prost-build = "0.12"

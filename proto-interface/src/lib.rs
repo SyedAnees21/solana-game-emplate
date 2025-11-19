@@ -10,12 +10,14 @@ pub mod messages;
 pub mod outgoing;
 pub mod updates;
 pub mod web3;
+pub mod errors;
 
 pub type AttributeId = u32;
 pub type SessionId = u64;
 pub type Timestamp = u64;
 pub type EntityId = u32;
 pub type PlayerId = u64;
+pub type ServerId = u64;
 
 pub const MAX_ATTRIBUTES_PER_COMPONENT: usize = 128;
 pub const MAX_STRING_LENGTH: usize = 30;
@@ -33,7 +35,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{bytes, fill_payload, from_bytes, ValuePayload};
+    use crate::{ValuePayload, bytes, fill_payload, from_bytes, web3::WEB3_VALUE_PAYLOAD_BYTES};
 
     #[test]
     fn payload_operations() {
@@ -42,17 +44,17 @@ mod tests {
         let z: f64 = 3.;
         let w: f64 = 4.;
         let string = String::from("ABCDFEGH");
-        let mut payload: ValuePayload = ValuePayload::default();
+        let mut payload: ValuePayload = [0; WEB3_VALUE_PAYLOAD_BYTES];
 
         let bytes = bytes!(string, String);
         fill_payload(&mut payload, bytes);
 
-        assert_eq!(&payload.as_ref()[..bytes.len()], bytes);
-        assert_eq!(from_bytes!(&payload.as_ref()[..bytes.len()], String), string);
+        assert_eq!(&payload[..bytes.len()], bytes);
+        assert_eq!(from_bytes!(&payload[..bytes.len()], String), string);
 
-        payload = ValuePayload::default();
+        payload = [0; WEB3_VALUE_PAYLOAD_BYTES];
 
         fill_payload(&mut payload, bytes!(x, y, z, w));
-        assert_eq!(from_bytes!(payload.as_ref(), 32, f64), [x, y, z, w]);
+        assert_eq!(from_bytes!(payload, 32, f64), [x, y, z, w]);
     }
 }
