@@ -1157,6 +1157,7 @@ dependencies = [
  "proto-interface",
  "rand 0.8.5",
  "sdk",
+ "solana-game-template",
  "tokio",
  "tokio-util",
 ]
@@ -2297,6 +2298,7 @@ dependencies = [
 name = "proto-interface"
 version = "0.1.0"
 dependencies = [
+ "anchor-client",
  "anchor-lang",
  "arrayvec",
  "bytemuck",
