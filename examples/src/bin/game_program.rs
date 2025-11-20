@@ -9,7 +9,7 @@ use anchor_client::{
 };
 use anchor_lang::{declare_program, prelude::system_program, InstructionData, ToAccountMetas};
 use anyhow;
-use proto_interface::{bytes, EntityId, InlineString, PlayerId, PDA};
+use proto_interface::{bytes, EntityId, web3::InlineString, PlayerId, PDA};
 use rand::rngs::OsRng;
 use rand::RngCore;
 use std::{ops::Deref, rc::Rc, thread::sleep, time::Duration};

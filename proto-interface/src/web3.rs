@@ -20,44 +20,6 @@ pub mod tags {
     pub const STRING: ValueTag = 4;
 }
 
-// #[repr(C)]
-// #[derive(Clone, Copy, Debug, PartialEq, Pod, Zeroable, AnchorSerialize, AnchorDeserialize)]
-// pub struct ValueTag(u8);
-
-// impl From<u8> for ValueTag {
-//     fn from(value: u8) -> Self {
-//         Self(value)
-//     }
-// }
-
-// impl AsRef<u8> for ValueTag {
-//     fn as_ref(&self) -> &u8 {
-//         &self.0
-//     }
-// }
-
-// #[repr(C)]
-// #[derive(Clone, Copy, Pod, Zeroable, AnchorSerialize, AnchorDeserialize, Debug)]
-// pub struct ValuePayload([u8; WEB3_VALUE_PAYLOAD_BYTES]);
-
-// impl Default for ValuePayload {
-//     fn default() -> Self {
-//         Self([0; WEB3_VALUE_PAYLOAD_BYTES])
-//     }
-// }
-
-// impl AsRef<[u8; WEB3_VALUE_PAYLOAD_BYTES]> for ValuePayload {
-//     fn as_ref(&self) -> &[u8; WEB3_VALUE_PAYLOAD_BYTES] {
-//         &self.0
-//     }
-// }
-
-// impl AsMut<[u8; WEB3_VALUE_PAYLOAD_BYTES]> for ValuePayload {
-//     fn as_mut(&mut self) -> &mut [u8; WEB3_VALUE_PAYLOAD_BYTES] {
-//         &mut self.0
-//     }
-// }
-
 #[repr(C)]
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Pod, Zeroable, Debug, Default)]
 pub struct InlineString {

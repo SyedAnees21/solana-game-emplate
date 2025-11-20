@@ -42,6 +42,10 @@ macro_rules! PDA {
         let __pda_seeds: &[&[u8]] = &[$(&$seed),*];
         anchor_lang::prelude::Pubkey::find_program_address(__pda_seeds, &$programID)
     }};
+
+    ($seeds:expr, $programID:expr) => {{
+        anchor_lang::prelude::Pubkey::find_program_address($seeds, &$programID)
+    }}
 }
 
 #[cfg(test)]
