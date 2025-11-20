@@ -15,6 +15,3 @@ anchor-lang = { workspace = true }
 dashmap ={ workspace = true}
 arrayvec = { workspace = true}
 arc-swap ={ workspace = true}
-
-[build-dependencies]
-prost-build = "0.12"

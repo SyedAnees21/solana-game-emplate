@@ -1,11 +1,5 @@
 [workspace]
-members = [
-    "programs/*",
-    "server",
-    "sdk",
-    "examples",
-    "proto-interface",
-]
+members = ["programs/*", "server", "sdk", "examples", "proto-interface"]
 
 resolver = "2"
 
@@ -21,9 +15,7 @@ arrayvec = "0.7.6"
 arc-swap = "1.7.1"
 anyhow = "1.0.100"
 thiserror = "2.0.17"
-bytemuck = {version = "1.24.0", features = ["derive", "min_const_generics"]}
-rand = { version = "0.8", features = ["std"] }
-
+bytemuck = { version = "1.24.0", features = ["derive", "min_const_generics"] }
 
 [profile.release]
 overflow-checks = true

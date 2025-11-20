@@ -1,5 +1,5 @@
 use anchor_lang::declare_program;
-use proto_interface::InlineString;
+use proto_interface::web3::InlineString;
 
 use crate::web3::solana_game::types;
 

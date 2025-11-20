@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use crate::web3::{
-    provider::{Contract, ProviderWallet, SolanaProvider},
     instructions,
+    provider::{self, Contract, ProviderWallet, SolanaProvider},
     solana_game::client::{
         accounts::{InitializeGame, InitializePlayer},
         args,
@@ -13,7 +13,9 @@ use anchor_lang::{
     prelude::{system_program, Pubkey},
     AccountDeserialize, InstructionData, ToAccountMetas,
 };
-use proto_interface::{bytes, errors::AppError, InlineString, PlayerId, ServerId, SessionId, PDA};
+use proto_interface::{
+    bytes, errors::AppError, web3::InlineString, PlayerId, ServerId, SessionId, PDA,
+};
 use tokio::{
     sync::{
         mpsc::{Receiver, UnboundedReceiver},
@@ -28,25 +30,19 @@ pub enum W3Commands {
         name: Option<InlineString>,
         sender: oneshot::Sender<Pubkey>,
     },
-    // Interact{
-    //     program_key: String,
-    //     instructions: I,
-    //     args: A,
-    //     signer: S,
-    // },
-    // Read{
-    //     program_key: String,
-    //     account_pubkey: Pubkey,
-    // },
 }
 
-pub fn init_game_state_on_chain(
-    game_manager_program: &Contract,
+pub async fn init_game_state_on_chain(
+    game_manager_program: Arc<Contract>,
     provider_wallet: ProviderWallet,
     server_id: ServerId,
     server_name: InlineString,
 ) -> Result<Pubkey, AppError> {
-    let game_state = PDA!([server_id.to_le_bytes()], game_manager_program.id()).0;
+    let game_state = PDA!(
+        [bytes!("game", String), bytes!(server_id)],
+        game_manager_program.id()
+    )
+    .0;
 
     let inst = InitializeGame {
         game_state,
@@ -59,12 +55,7 @@ pub fn init_game_state_on_chain(
         game_name: server_name.into(),
     };
 
-    game_manager_program
-        .request()
-        .accounts(inst)
-        .args(args)
-        .signer(provider_wallet)
-        .send()?;
+    provider::send_transaction(game_manager_program, inst, args, provider_wallet).await?;
 
     Ok(game_state)
 }
@@ -105,6 +96,7 @@ pub async fn handle_command(
                 name.unwrap_or_default(),
                 sender,
             )
+            .await
         }
     };
 }

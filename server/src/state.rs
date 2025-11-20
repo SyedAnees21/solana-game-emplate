@@ -1,7 +1,8 @@
 use anchor_client::solana_sdk::signature::Keypair;
 use dashmap::DashSet;
-use proto_interface::{PlayerId, SessionId};
+use proto_interface::{web3::InlineString, PlayerId, ServerId, SessionId};
 use std::{
+    path::PathBuf,
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc,
@@ -31,6 +32,8 @@ type UPS = u8;
 
 pub struct Global {
     global_id: AtomicU64,
+    wallet_path: PathBuf,
+    server_name: InlineString,
     players: Arc<Players>,
     entities: Arc<PlayerEntities>,
     relevance_snapshot: Arc<RelevanceSnapshot>,
@@ -45,6 +48,18 @@ impl Global {
 
     pub fn assign_id(&self) -> SessionId {
         self.global_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    pub fn provider_wallet_path(&self) -> PathBuf {
+        self.wallet_path.clone()
+    }
+
+    pub fn global_id(&self) -> ServerId {
+        self.global_id.load(Ordering::Relaxed)
+    }
+
+    pub fn server_name(&self) -> InlineString {
+        self.server_name
     }
 
     pub fn generate_local_wallet(&self) -> Keypair {
@@ -92,6 +107,8 @@ impl Default for Global {
         let global_id = Self::init_global_id();
         Self {
             global_id,
+            server_name: InlineString::from("Development Game Server"),
+            wallet_path: PathBuf::from("./assets/provider_wallet.json"),
             players: Arc::new(Players::default()),
             channels: Arc::new(Channels::default()),
             entities: Arc::new(PlayerEntities::default()),

@@ -1,15 +1,22 @@
 use anchor_client::{
     solana_sdk::{
         commitment_config::CommitmentConfig,
-        signature::Keypair,
+        signature::{Keypair, Signature},
         signer::{EncodableKey, Signer},
     },
     Client, Cluster, Program,
 };
 use anchor_lang::{prelude::Pubkey, AccountDeserialize, InstructionData, ToAccountMetas};
 use dashmap::{mapref::one::Ref, DashMap};
-use proto_interface::{errors::AppError, InlineString, PlayerId, ServerId};
-use std::{collections::HashMap, error::Error, hash::Hash, path::PathBuf, rc::Rc, sync::Arc};
+use proto_interface::{errors::AppError, web3::InlineString, PlayerId, ServerId, PDA};
+use std::{
+    collections::HashMap,
+    error::Error,
+    hash::Hash,
+    path::{Path, PathBuf},
+    rc::Rc,
+    sync::Arc,
+};
 use tokio::{sync::mpsc::UnboundedReceiver, time::Interval};
 
 use crate::web3::{
@@ -19,7 +26,7 @@ use crate::web3::{
 
 pub type ProviderWallet = Arc<Keypair>;
 pub type Contract = Program<ProviderWallet>;
-pub type Programs = DashMap<String, Contract>;
+pub type Programs = DashMap<String, Arc<Contract>>;
 pub type PlayerWallets = DashMap<PlayerId, Keypair>;
 pub type DerivedAddresses = DashMap<PlayerId, Pubkey>;
 
@@ -34,7 +41,7 @@ pub struct SolanaProvider {
 }
 
 impl SolanaProvider {
-    pub fn new<P>(
+    pub async fn start_provider<P>(
         network: Cluster,
         wallet_path: P,
         receiver: UnboundedReceiver<W3Commands>,
@@ -43,7 +50,7 @@ impl SolanaProvider {
         transaction_tick: Interval,
     ) -> Result<(), AppError>
     where
-        P: AsRef<PathBuf>,
+        P: AsRef<Path>,
     {
         let keypair = Keypair::read_from_file(wallet_path.as_ref())
             .map_err(|e| AppError::Custom(format!("Unable to parse Keypair from file: {e}")))?;
@@ -56,17 +63,25 @@ impl SolanaProvider {
             CommitmentConfig::confirmed(),
         );
 
+        let game_manager_program = Arc::new(client.program(solana_game::ID)?);
+
         let programs = Programs::from_iter(vec![(
             "game_manager".to_string(),
-            client.program(solana_game::ID)?,
+            game_manager_program.clone(),
         )]);
 
         let state_address = service::init_game_state_on_chain(
-            programs.get("game_manager").unwrap().value(),
+            game_manager_program.clone(),
             provider_wallet.clone(),
             server_id,
             server_name,
-        )?;
+        )
+        .await?;
+
+        println!(
+            "State created at derived address: {:?}",
+            state_address.to_string()
+        );
 
         let provider = Arc::new(Self {
             server_id,
@@ -89,7 +104,7 @@ impl SolanaProvider {
         program_key: String,
     ) -> Result<(), Box<dyn Error>> {
         let program_inner = self.rpc_client.program(program_id)?;
-        self.programs.insert(program_key, program_inner);
+        self.programs.insert(program_key, Arc::new(program_inner));
         Ok(())
     }
 
@@ -109,7 +124,10 @@ impl SolanaProvider {
         self.server_id
     }
 
-    pub fn get_program(&self, program_key: &str) -> Result<Ref<'_, String, Contract>, AppError> {
+    pub fn get_program(
+        &self,
+        program_key: &str,
+    ) -> Result<Ref<'_, String, Arc<Contract>>, AppError> {
         match self.programs.get(program_key) {
             Some(program) => Ok(program),
             None => Err(AppError::Custom(format!(
@@ -124,7 +142,7 @@ impl SolanaProvider {
         self.derived_addresses.insert(id, custodial_state);
     }
 
-    pub fn interact_with_program<'a, I, A, S>(
+    pub async fn interact_with_program<I, A, S>(
         &self,
         program_key: &str,
         instructions: I,
@@ -132,18 +150,12 @@ impl SolanaProvider {
         signer: S,
     ) -> Result<(), AppError>
     where
-        A: InstructionData,
-        I: ToAccountMetas,
-        S: Signer + 'a,
+        A: InstructionData + Send + 'static,
+        I: ToAccountMetas + Send + 'static,
+        S: Signer + Send + 'static,
     {
-        let program = self.get_program(program_key)?;
-
-        program
-            .request()
-            .accounts(instructions)
-            .args(args)
-            .signer(signer)
-            .send()?;
+        let program = self.get_program(program_key)?.value().clone();
+        send_transaction(program, instructions, args, signer).await?;
         Ok(())
     }
 
@@ -177,17 +189,31 @@ impl SolanaProvider {
     {
         let program_id = self.get_program(&program_key)?.id();
         let seeds = seeds.iter().map(|s| s.as_ref()).collect::<Vec<&[u8]>>();
-        Ok(crate::PDA!(program_id => seeds.as_slice()))
+        Ok(PDA!(seeds.as_slice(), program_id))
     }
 }
 
-#[macro_export]
-macro_rules! PDA {
-    ( $($seed:expr),* $(,)? ) => {{
-        let __pda_seeds: &[&[u8]] = &[$($seed),*];
-        anchor_client::solana_sdk::pubkey::Pubkey::find_program_address(__pda_seeds, &crate::PROGRAM_ID)
-    }};
-    ( $programID:expr => $seeds:expr ) => {{
-        anchor_client::solana_sdk::pubkey::Pubkey::find_program_address($seeds, &$programID)
-    }};
+pub async fn send_transaction<'a, I, A, S>(
+    program: Arc<Contract>,
+    instructions: I,
+    args: A,
+    signer: S,
+) -> Result<Signature, AppError>
+where
+    A: InstructionData + Send + 'static,
+    I: ToAccountMetas + Send + 'static,
+    S: Signer + Send + 'static,
+{
+    let sig = tokio::task::spawn_blocking(move || {
+        program
+            .request()
+            .accounts(instructions)
+            .args(args)
+            .signer(signer)
+            .send()
+    })
+    .await
+    .map_err(|e| AppError::Custom(format!("Tokio Join Error occured: {e}")))??;
+
+    Ok(sig)
 }

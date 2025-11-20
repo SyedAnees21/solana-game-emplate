@@ -2,20 +2,15 @@ use std::sync::Arc;
 
 use anchor_client::solana_sdk::{signature::Keypair, signer::Signer};
 use anchor_lang::prelude::{system_program, Pubkey};
-use proto_interface::{bytes, errors::AppError, InlineString, PlayerId, ServerId, PDA};
+use proto_interface::{bytes, errors::AppError, web3::InlineString, PlayerId, ServerId, PDA};
 use tokio::sync::oneshot;
 
 use crate::web3::{
-    provider::{Contract, ProviderWallet, SolanaProvider},
-    solana_game::client::{
-        accounts::{InitializeGame, InitializePlayer},
-        args,
-    },
+    provider::SolanaProvider,
+    solana_game::client::{accounts::InitializePlayer, args},
 };
 
-
-
-pub fn init_player_on_chain(
+pub async fn init_player_on_chain(
     provider: Arc<SolanaProvider>,
     player_id: PlayerId,
     player_name: InlineString,
@@ -42,7 +37,10 @@ pub fn init_player_on_chain(
         player_name: player_name.into(),
     };
 
-    provider.interact_with_program("game_manager", inst, args, provider_wallet)?;
+    provider
+        .interact_with_program("game_manager", inst, args, provider_wallet)
+        .await?;
+    
     provider.track_player(player_id, player_state, player_wallet);
 
     if let Err(_) = sender.send(player_public_key) {
