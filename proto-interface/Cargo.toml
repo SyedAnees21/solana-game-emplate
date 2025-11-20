@@ -4,15 +4,23 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
+default = ["web3", "proto"]
+# Feature to enable deps required by the programs for integrating
+# this interface library without conflicts.
+web3 = ["dep:anchor-lang", "dep:prost"]
+# Feature to enable deps required by the rest of the packages.
+proto = ["dep:prost", "dep:prost-build", "dep:anchor-client"]
+
+
 idl-build = []
 
 [dependencies]
-prost = { workspace = true }
 thiserror = { workspace = true }
 arrayvec = { workspace = true }
 bytemuck = { workspace = true }
-anchor-lang ={ workspace = true }
-anchor-client ={ workspace = true }
+prost = { workspace = true, optional = true }
+anchor-lang = { workspace = true, optional = true }
+anchor-client = { workspace = true, optional = true }
 
 [build-dependencies]
-prost-build = "0.12"
+prost-build = { version = "0.12", optional = true }

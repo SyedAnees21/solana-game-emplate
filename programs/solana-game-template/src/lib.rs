@@ -8,7 +8,7 @@ use crate::instructions::*;
 pub mod instructions;
 pub mod state;
 
-declare_id!("ABXBgpeKKeRu9eKLtCVF7MKnc6E4ABkx8nJdLSsFdK2M");
+declare_id!("4KDsBp93AJpecx45DY3B9DQD5afKgnLsKpTFpz6TLPS1");
 
 #[program]
 pub mod solana_game {

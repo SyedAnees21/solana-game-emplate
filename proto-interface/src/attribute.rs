@@ -7,8 +7,8 @@ use crate::{
         messages::Entity,
     },
     from_bytes,
-    web3::{self, WEB3_VALUE_PAYLOAD_BYTES},
-    AttributeId, EntityId, Timestamp, ValuePayload, ValueTag, MAX_STRING_LENGTH,
+    web3::{self, ValuePayload, ValueTag, WEB3_VALUE_PAYLOAD_BYTES},
+    AttributeId, EntityId, Timestamp, MAX_STRING_LENGTH,
 };
 
 #[derive(Clone, Debug, PartialEq, Default)]

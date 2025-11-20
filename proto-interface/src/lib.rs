@@ -1,7 +1,6 @@
 pub use crate::attribute::Value;
 pub use external::attributes::Attribute;
 pub use external::messages::TickUpdate;
-pub use web3::*;
 
 pub mod attribute;
 pub mod external;
@@ -9,8 +8,12 @@ pub mod macros;
 pub mod messages;
 pub mod outgoing;
 pub mod updates;
-pub mod web3;
+
+#[cfg(feature = "proto")]
 pub mod errors;
+
+#[cfg(feature = "web3")]
+pub mod web3;
 
 pub type AttributeId = u32;
 pub type SessionId = u64;
@@ -23,7 +26,7 @@ pub const MAX_ATTRIBUTES_PER_COMPONENT: usize = 128;
 pub const MAX_STRING_LENGTH: usize = 30;
 pub const WEB3_VALUE_PAYLOAD_BYTES: usize = 64;
 
-pub fn fill_payload<B>(payload: &mut ValuePayload, bytes: B)
+pub fn fill_payload<B>(payload: &mut web3::ValuePayload, bytes: B)
 where
     B: AsRef<[u8]>,
 {
@@ -35,7 +38,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{ValuePayload, bytes, fill_payload, from_bytes, web3::WEB3_VALUE_PAYLOAD_BYTES};
+    use crate::{web3::ValuePayload, bytes, fill_payload, from_bytes, web3::WEB3_VALUE_PAYLOAD_BYTES};
 
     #[test]
     fn payload_operations() {

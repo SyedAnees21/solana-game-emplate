@@ -35,6 +35,7 @@ macro_rules! from_bytes {
     }};
 }
 
+#[cfg(feature = "web3")]
 #[macro_export]
 macro_rules! PDA {
     ( [$($seed:expr),* $(,)?] , $programID:expr) => {{
@@ -44,6 +45,7 @@ macro_rules! PDA {
 }
 
 #[cfg(test)]
+#[cfg(feature = "web3")]
 mod tests {
     use crate::{from_bytes, EntityId, PlayerId};
     use anchor_lang::prelude::Pubkey;
